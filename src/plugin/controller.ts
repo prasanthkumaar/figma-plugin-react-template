@@ -24,3 +24,25 @@ figma.ui.onmessage = (msg) => {
 
   figma.closePlugin();
 };
+
+
+figma.codegen.on('generate', (event) => {
+  const selectedNode = event.node;
+  if (selectedNode.type === 'INSTANCE') {
+      console.log(selectedNode.componentProperties);
+      //console.log(selectedNode);
+      //copy(JSON.stringify(Object_Name));
+      //electedNode.highlight
+      // const selectedNode1 = event.node;
+  }
+  const code = `{
+  name: "${event.node.name}"
+}`;
+  return [
+      {
+          language: "TYPESCRIPT",
+          code: code,
+          title: "React",
+      },
+  ];
+});
