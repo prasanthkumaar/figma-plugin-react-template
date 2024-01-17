@@ -25,6 +25,12 @@ figma.ui.onmessage = (msg) => {
   figma.closePlugin();
 };
 
+figma.on("selectionchange", () => {
+  console.log(figma.currentPage.selection[0])
+  figma.showUI(figma.currentPage.selection[0].id);
+
+})
+
 
 figma.codegen.on('generate', (event) => {
   const selectedNode = event.node;
