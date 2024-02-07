@@ -1,7 +1,40 @@
+const PLUGIN_NAMESPACE = ''
 figma.showUI(__html__);
 
-// Variable that is used to store the valid instances. It is cleared everytime the user click on a new node
+// Map that is used to store the valid instances. It is cleared everytime the user click on a new node
 let validInstanceNodeMap = new Map<string, InstanceNode>();
+
+
+//Function to add the valid instances into the shared plugin data. Allows clean up of annotations for the whole document if needed
+function addInstancesToDocumentNode() {
+  //figma.root.setPluginData('')
+}
+
+//Function to remove any annotations store on the document created by the plugin
+function removeAnnotationsFromDocumentNode() {
+
+}
+
+//Function to add the OGP annotation
+function addOGPAnnotationToNode(node) {
+  node.annotations = [{ label: `<div>
+    <div>（&nbsp;&nbsp;）OGP - ${node.name}</div>
+    <br>
+    <a href="${node.mainComponent.parent.documentationLinks[0].uri}">Documentation Link</a>
+  </div>`}]
+}
+
+function removeAnnotationsFromNodeList() {
+    // Loop through the map and run the function on each value
+    if (validInstanceNodeMap.size > 0) {
+      validInstanceNodeMap.forEach((value) => {
+        console.log(value.id)
+        value.annotations = []
+      });
+    }
+
+    }
+
 
 // Function to send a Map of instance node data to the UI
 function sendInstanceNodesData(instanceNodesMap: Map<string, InstanceNode>): void {
@@ -20,14 +53,7 @@ function sendInstanceNodesData(instanceNodesMap: Map<string, InstanceNode>): voi
 //Function to handle when a user selects on another node. It is run when plugin first loads
 function handleSelectionChanged() {
 
-  //const [frame1, frame2] = figma.currentPage.children
-
-// Add a measurement
-  // const measurement1 =
-  // figma.currentPage.addMeasurement(
-  //   { node: frame1, side: 'RIGHT' },
-  //   { node: frame2, side: 'LEFT' }
-  // )
+  removeAnnotationsFromNodeList();
 
   const selectedNode = figma.currentPage.selection[0];
   validInstanceNodeMap.clear();
@@ -81,7 +107,9 @@ function isNodeValid(node): boolean {
 
       if (documentationLink) {
         //console.log(documentationLink)
-        node.annotations = [{ label: 'Main product navigation' }]
+        addOGPAnnotationToNode(node);
+
+        
         
         return true;
       } else {
@@ -96,9 +124,9 @@ function isNodeValid(node): boolean {
 }
 
 figma.ui.onmessage = (msg) => {
-  if (msg.type === 'nodeId') {
-    const selectedNode = validInstanceNodeMap.get(msg.id);
-    figma.viewport.scrollAndZoomIntoView([selectedNode]);
+
+  if (msg.type === 'remove-annotations') {
+    removeAnnotationsFromNodeList()
   }
 };
 
