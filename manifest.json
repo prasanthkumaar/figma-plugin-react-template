@@ -8,6 +8,7 @@
   "capabilities": [
     "codegen","inspect"
   ],
+  "enableProposedApi": true,
   "codegenLanguages": [
     {
       "label": "Language Label",

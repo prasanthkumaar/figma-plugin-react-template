@@ -19,6 +19,16 @@ function sendInstanceNodesData(instanceNodesMap: Map<string, InstanceNode>): voi
 
 //Function to handle when a user selects on another node. It is run when plugin first loads
 function handleSelectionChanged() {
+
+  //const [frame1, frame2] = figma.currentPage.children
+
+// Add a measurement
+  // const measurement1 =
+  // figma.currentPage.addMeasurement(
+  //   { node: frame1, side: 'RIGHT' },
+  //   { node: frame2, side: 'LEFT' }
+  // )
+
   const selectedNode = figma.currentPage.selection[0];
   validInstanceNodeMap.clear();
 
@@ -60,15 +70,19 @@ function findAllValidInstances(selectedNode: SceneNode) {
 // - InstanceNode
 // - Must have a documentationLink
 function isNodeValid(node): boolean {
+
   if (node.type === 'INSTANCE') {
     // Check if it has a developer resource link
     //const link = await node.getDevResourcesAsync();
 
     if (node.mainComponent.parent && node.mainComponent.parent.type === 'COMPONENT_SET') {
+
       let documentationLink = node.mainComponent.parent.documentationLinks[0];
 
       if (documentationLink) {
         //console.log(documentationLink)
+        node.annotations = [{ label: 'Main product navigation' }]
+        
         return true;
       } else {
         return false;
