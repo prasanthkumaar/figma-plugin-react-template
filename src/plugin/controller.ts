@@ -1,85 +1,90 @@
-const PLUGIN_NAMESPACE = ''
 figma.showUI(__html__);
+// import {getStoredNodeArray, removeAllPluginData, removeAnnotationsFromStoredNodes, saveNodeArrToDocumentPluginData, } from './plugin-data';
 
 // Map that is used to store the valid instances. It is cleared everytime the user click on a new node
-let validInstanceNodeMap = new Map<string, InstanceNode>();
+let listOfCurrentValidInstances = new Map<string, InstanceNode>();
 
+// Switch for annotations
+let annotationSwitch = true;
 
-//Function to add the valid instances into the shared plugin data. Allows clean up of annotations for the whole document if needed
-function addInstancesToDocumentNode() {
-  //figma.root.setPluginData('')
+//Function to check plugin data
+function checkPluginData() {
+  console.log('Checking plugin data...');
+  // console.log(getStoredNodeArray()); #TODO: PLUGIN_DATA
 }
 
-//Function to remove any annotations store on the document created by the plugin
-function removeAnnotationsFromDocumentNode() {
-
-}
 
 //Function to add the OGP annotation
 function addOGPAnnotationToNode(node) {
-  node.annotations = [{ label: `<div>
+
+  node.annotations = [{
+    label:
+      `<div>
     <div>（&nbsp;&nbsp;）OGP - ${node.name}</div>
     <br>
     <a href="${node.mainComponent.parent.documentationLinks[0].uri}">Documentation Link</a>
   </div>`}]
 }
 
-function removeAnnotationsFromNodeList() {
-    // Loop through the map and run the function on each value
-    if (validInstanceNodeMap.size > 0) {
-      validInstanceNodeMap.forEach((value) => {
-        console.log(value.id)
-        value.annotations = []
-      });
-    }
 
-    }
+// Loop through the map and removes the current annotations that each node in the map has
+function removeAnnotationsFromNodeList(listOfInstanceNodeMap: Map<string, InstanceNode>) {
+  if (listOfInstanceNodeMap.size > 0) {
+    listOfInstanceNodeMap.forEach((value) => {
+      value.annotations = []
+    });
+  }
+}
 
 
 // Function to send a Map of instance node data to the UI
 function sendInstanceNodesData(instanceNodesMap: Map<string, InstanceNode>): void {
-  // Convert the Map values into an array of simplified objects
-  const nodesData = Array.from(instanceNodesMap.values()).map((node) => {
-    const parent = node.mainComponent.parent;
-    if (parent.type === 'COMPONENT_SET') {
-      return { id: node.id, name: node.name, documentationLink: parent.documentationLinks[0].uri };
-    }
-    return { id: node.id, name: node.name };
-  });
-
-  figma.ui.postMessage({ type: 'haveInstances', nodes: nodesData });
+  figma.ui.postMessage({ type: 'HAS_OGP_COMPONENTS', size: instanceNodesMap.size, selectedFrame: figma.currentPage.selection[0].name })
 }
 
 //Function to handle when a user selects on another node. It is run when plugin first loads
 function handleSelectionChanged() {
 
-  removeAnnotationsFromNodeList();
+  if (listOfCurrentValidInstances) {
+    removeAnnotationsFromNodeList(listOfCurrentValidInstances);
+    listOfCurrentValidInstances.clear();
+    // removeAllPluginData()  #TODO: PLUGIN_DATA
+  }
+
 
   const selectedNode = figma.currentPage.selection[0];
-  validInstanceNodeMap.clear();
 
   if (selectedNode) {
-    findAllValidInstances(selectedNode);
-  } else {
-    console.log('No frames selected');
-    figma.ui.postMessage({
-      type: 'noInstances',
-      message: 'No valid instances selected. Please select one or more instances.',
-    });
-  }
 
-  if (validInstanceNodeMap.size > 0) {
-    console.log(`controller Found ${validInstanceNodeMap.size} instances:\n`);
-    sendInstanceNodesData(validInstanceNodeMap);
+    findAllValidInstances(selectedNode);
+    if (listOfCurrentValidInstances) {
+      sendInstanceNodesData(listOfCurrentValidInstances);
+    }
+
+    if (annotationSwitch) {
+
+      const nodeArr: InstanceNode[] = []
+
+      listOfCurrentValidInstances.forEach((value) => {
+
+        addOGPAnnotationToNode(value);
+        nodeArr.push(value)
+      })
+      // saveNodeArrToDocumentPluginData(nodeArr) #TODO: PLUGIN_DATA
+
+    }
   } else {
-    console.warn('No valid instances in the frame selected');
+    figma.ui.postMessage({ type: 'NOTHING_SELECTED' })
+
   }
 }
+
+
 
 //Function to recursively traverse through all the nodes to find the valid instance nodes
 function findAllValidInstances(selectedNode: SceneNode) {
   if (isNodeValid(selectedNode) && selectedNode.type === 'INSTANCE') {
-    validInstanceNodeMap.set(selectedNode.id, selectedNode);
+    listOfCurrentValidInstances.set(selectedNode.id, selectedNode);
     return;
   }
 
@@ -98,25 +103,15 @@ function findAllValidInstances(selectedNode: SceneNode) {
 function isNodeValid(node): boolean {
 
   if (node.type === 'INSTANCE') {
-    // Check if it has a developer resource link
-    //const link = await node.getDevResourcesAsync();
-
     if (node.mainComponent.parent && node.mainComponent.parent.type === 'COMPONENT_SET') {
-
       let documentationLink = node.mainComponent.parent.documentationLinks[0];
 
       if (documentationLink) {
-        //console.log(documentationLink)
-        addOGPAnnotationToNode(node);
-
-        
-        
         return true;
       } else {
         return false;
       }
     }
-
 
   } else {
     return false;
@@ -126,12 +121,24 @@ function isNodeValid(node): boolean {
 figma.ui.onmessage = (msg) => {
 
   if (msg.type === 'remove-annotations') {
-    removeAnnotationsFromNodeList()
+    removeAnnotationsFromNodeList(listOfCurrentValidInstances)
+    // removeAnnotationsFromStoredNodes() #TODO: PLUGIN_DATA
+
+  } else if (msg.type === 'plugin-data') {
+    checkPluginData();
+
+  } else if (msg.type === 'annotation-switch') {
+    annotationSwitch = msg.value
+    handleSelectionChanged()
   }
 };
 
 figma.on('selectionchange', () => {
   handleSelectionChanged();
 });
+
+figma.on("close", () => {
+  removeAnnotationsFromNodeList(listOfCurrentValidInstances)
+})
 
 handleSelectionChanged();
